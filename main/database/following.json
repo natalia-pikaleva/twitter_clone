@@ -1,0 +1,6 @@
+{"following":  [{"follower_id": 2, "subscribed_list":  [3, 4, 6]},
+  {"follower_id":  3, "subscribed_list": [2, 4, 6, 7]},
+  {"follower_id":  4, "subscribed_list": [5, 7]},
+  {"follower_id":  5, "subscribed_list": [2, 6]},
+  {"follower_id":  6, "subscribed_list": []},
+  {"follower_id": 7, "subscribed_list": [2, 3, 4, 5, 6]}]}

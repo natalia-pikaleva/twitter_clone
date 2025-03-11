@@ -1,28 +1,30 @@
 import asyncio
-import json
-import os
 import csv
+import json
 import logging
-import asyncpg
-from typing import List
+import os
+from typing import List, AsyncGenerator
 
+
+import asyncpg
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
-from models import Base, User, Tweet, LikeTweet, SubscribedUser, Media
+from main.models import Base, LikeTweet, Media, SubscribedUser, Tweet, User
 
-# Обновите URI базы данных, чтобы использовать асинхронный драйвер
-SQLALCHEMY_DATABASE_URI = 'postgresql+asyncpg://postgres:postgres@localhost:5432/twitter_db'
+SQLALCHEMY_DATABASE_URI = (
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/twitter_db"
+)
 
-# Создайте асинхронный движок
 # engine = create_async_engine(SQLALCHEMY_DATABASE_URI, echo=True)
 engine = create_async_engine(SQLALCHEMY_DATABASE_URI)
 
-# Создайте асинхронную сессию
-AsyncSessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+AsyncSessionLocal = sessionmaker(engine,
+                                 expire_on_commit=False,
+                                 class_=AsyncSession)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -30,38 +32,39 @@ logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - "
+                              "%(levelname)s - %(message)s")
 console_handler.setFormatter(formatter)
 
 logger.addHandler(console_handler)
 
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting async session"""
     async with AsyncSessionLocal() as session:
         yield session
 
 
-async def insert_users(session: AsyncSession):
+async def insert_users(session: AsyncSession) -> None:
     """Заполнение таблицы пользователей"""
     try:
         logger.info("Start func insert_users")
         current_dir = os.path.dirname(__file__)
-        users_file_path = os.path.join(current_dir, 'users.csv')
+        users_file_path = os.path.join(current_dir, "users.csv")
 
         if not os.path.exists(users_file_path):
             logger.warning("File users.csv does not exist")
             return
 
-        with open(users_file_path, newline='', encoding='UTF-8') as csvfile:
+        with open(users_file_path, newline="", encoding="UTF-8") as csvfile:
             reader = csv.DictReader(csvfile)
             users_to_insert = []
             for row in reader:
                 user = User(
-                    login=row['login'],
-                    api_key=row['api_key'],
-                    name=row['name'],
-                    surname=row['surname']
+                    login=row["login"],
+                    api_key=row["api_key"],
+                    name=row["name"],
+                    surname=row["surname"],
                 )
                 users_to_insert.append(user)
             session.add_all(users_to_insert)
@@ -72,18 +75,19 @@ async def insert_users(session: AsyncSession):
         await session.rollback()
 
 
-async def insert_following(session: AsyncSession):
+async def insert_following(session: AsyncSession) -> None:
     """Заполнение таблицы подписчиков"""
     logger.info("Start func insert_following")
     current_dir = os.path.dirname(__file__)
-    following_file_path = os.path.join(current_dir, 'following.json')
+    following_file_path = os.path.join(current_dir, "following.json")
 
     if not os.path.exists(following_file_path):
         logger.warning("File following.json does not exist")
         return
 
     try:
-        with open(following_file_path, 'r', encoding='UTF-8') as following_file:
+        with (open(following_file_path, "r", encoding="UTF-8")
+              as following_file):
             data = json.load(following_file)
             logger.info(f"Loaded data: {data}")
 
@@ -94,14 +98,13 @@ async def insert_following(session: AsyncSession):
                 for sub_id in follower["subscribed_list"]:
                     subscribe_obj = SubscribedUser(
                         follower_user_id=follower.get("follower_id"),
-                        subscribed_user_id=sub_id
+                        subscribed_user_id=sub_id,
                     )
                     subscribes_to_insert.append(subscribe_obj)
 
             session.add_all(subscribes_to_insert)
             await session.commit()
             logger.info("Subscribs inserted successfully")
-
 
     except Exception as e:
         await session.rollback()
@@ -112,14 +115,18 @@ async def insert_following(session: AsyncSession):
 async def load_tweets_data(file_path: str) -> dict:
     """Загрузка данных из файла tweets.json"""
     try:
-        with open(file_path, 'r', encoding='UTF-8') as tweets_file:
+        with open(file_path, "r", encoding="UTF-8") as tweets_file:
             return json.load(tweets_file)
     except Exception as e:
         logger.error(f"Error loading tweets data: {e}")
         return {}
 
 
-async def insert_media(session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str, attachments_list: List[str]) -> List[int]:
+async def insert_media(
+        session: AsyncSession,
+        UPLOAD_FOLDER_ABSOLUTE: str,
+        attachments_list: List[str]
+) -> List[int]:
     """Вставка медиа в базу данных"""
     media_ids = []
     for filename in attachments_list:
@@ -133,18 +140,22 @@ async def insert_media(session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str, attac
     return media_ids
 
 
-async def insert_tweets(session: AsyncSession, data: dict, UPLOAD_FOLDER_ABSOLUTE: str) -> None:
+async def insert_tweets(
+    session: AsyncSession, data: dict, UPLOAD_FOLDER_ABSOLUTE: str
+) -> None:
     """Вставка твитов в базу данных"""
     tweets_to_insert = []
     for tweet in data.get("tweets", []):
         logger.info(f"Processing tweet: {tweet}")
         attachments_list = tweet.get("attachments")
-        media_ids = await insert_media(session, UPLOAD_FOLDER_ABSOLUTE, attachments_list)
+        media_ids = await insert_media(
+            session, UPLOAD_FOLDER_ABSOLUTE, attachments_list
+        )
 
         tweet_obj = Tweet(
             user_id=tweet.get("user_id"),
             content=tweet.get("content"),
-            attachments=media_ids
+            attachments=media_ids,
         )
         tweets_to_insert.append(tweet_obj)
 
@@ -171,7 +182,8 @@ async def insert_likes(session: AsyncSession, data: dict) -> None:
         tweet_id = tweet_id_map.get(tweet_content)
 
         if not tweet_id:
-            logger.warning(f"Could not find tweet_id for content: {tweet_content}")
+            logger.warning(f"Could not find tweet_id for content: "
+                           f"{tweet_content}")
             continue
 
         for user_id in tweet.get("likes_list", []):
@@ -180,7 +192,7 @@ async def insert_likes(session: AsyncSession, data: dict) -> None:
             likes_to_insert.append(like_tweet)
 
     stmt = insert(LikeTweet).values(likes_to_insert)
-    stmt = stmt.on_conflict_do_nothing(index_elements=['user_id', 'tweet_id'])
+    stmt = stmt.on_conflict_do_nothing(index_elements=["user_id", "tweet_id"])
     try:
         await session.execute(stmt)
         await session.commit()
@@ -190,11 +202,13 @@ async def insert_likes(session: AsyncSession, data: dict) -> None:
         logger.error(f"Error inserting likes: {e}")
 
 
-async def insert_tweets_and_likes(session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str) -> None:
+async def insert_tweets_and_likes(
+    session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str
+) -> None:
     """Заполнение таблиц твитов и лайков"""
     logger.info("Start func insert_tweets_and_likes")
     current_dir = os.path.dirname(__file__)
-    tweets_file_path = os.path.join(current_dir, 'tweets.json')
+    tweets_file_path = os.path.join(current_dir, "tweets.json")
 
     if not os.path.exists(tweets_file_path):
         logger.warning("File tweets.json does not exist")
@@ -211,14 +225,14 @@ async def insert_tweets_and_likes(session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE:
     await insert_likes(session, data)
 
 
-async def check_db_exists(db_url: str):
+async def check_db_exists(db_url: str) -> bool:
     """Проверка существования БД через asyncpg"""
     try:
         conn = await asyncpg.connect(
-            user='postgres',
-            password='postgres',
-            host='localhost',
-            database=db_url.split('/')[-1]
+            user="postgres",
+            password="postgres",
+            host="localhost",
+            database=db_url.split("/")[-1],
         )
         await conn.close()
         return True
@@ -229,14 +243,14 @@ async def check_db_exists(db_url: str):
         return False
 
 
-async def create_database(db_name: str):
+async def create_database(db_name: str) -> bool:
     """Создание БД с помощью asyncpg"""
     try:
         conn = await asyncpg.connect(
-            user='postgres',
-            password='postgres',
-            host='localhost',
-            database='postgres'  # Системная БД для создания новых
+            user="postgres",
+            password="postgres",
+            host="localhost",
+            database="postgres",
         )
         await conn.execute(f"CREATE DATABASE {db_name}")
         await conn.close()
@@ -250,16 +264,13 @@ async def create_database(db_name: str):
         return False
 
 
-async def drop_database(db_name):
+async def drop_database(db_name) -> None:
     """
     Удаление базы данных.
     """
     try:
         conn = await asyncpg.connect(
-            host='localhost',
-            port=5432,
-            user='postgres',
-            password='postgres'
+            host="localhost", port=5432, user="postgres", password="postgres"
         )
         await conn.execute(f"DROP DATABASE IF EXISTS {db_name};")
         await conn.close()
@@ -268,12 +279,14 @@ async def drop_database(db_name):
         logger.error(f"Failed to drop database: {e}")
 
 
-async def start_bd(UPLOAD_FOLDER_ABSOLUTE):
+async def start_bd(UPLOAD_FOLDER_ABSOLUTE) -> None:
     """
     Создание базы данных при старте
     """
     try:
-        SQLALCHEMY_DATABASE_URI = 'postgresql+asyncpg://postgres:postgres@localhost:5432/twitter_db'
+        SQLALCHEMY_DATABASE_URI = (
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/twitter_db"
+        )
         db_name = "twitter_db"
 
         # Удаление базы данных, если она существует
@@ -308,7 +321,8 @@ async def start_bd(UPLOAD_FOLDER_ABSOLUTE):
                 result = await session.execute(select(Tweet))
                 tweets = result.scalars().all()
                 if not tweets:
-                    await insert_tweets_and_likes(session, UPLOAD_FOLDER_ABSOLUTE)
+                    await insert_tweets_and_likes(session,
+                                                  UPLOAD_FOLDER_ABSOLUTE)
                 else:
                     logger.info("Table tweets is exists in database")
 
@@ -321,19 +335,9 @@ async def start_bd(UPLOAD_FOLDER_ABSOLUTE):
 
             await engine.dispose()
 
-
-
-
-
     except OperationalError as e:
         logger.error(f"Operational error during database setup: {e}")
     except Exception as e:
         logger.error(f"Error during database setup: {e}")
 
 
-async def main():
-    await start_bd()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
