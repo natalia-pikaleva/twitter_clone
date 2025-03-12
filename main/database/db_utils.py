@@ -123,7 +123,7 @@ async def put_or_delete_like_on_tweet(db: AsyncSession,
     try:
         user = await check_api_key_user(db, api_key)
 
-        result = await db.execute(select(Tweet).filter_by(id=tweet_id))
+        result = await db.execute(select(Tweet).filter_by(id=tweet_id).limit(1))
         tweet = result.scalars().first()
         if not tweet:
             logger.error(f"tweet with id {tweet_id} do not found")
@@ -157,8 +157,8 @@ async def put_or_delete_like_on_tweet(db: AsyncSession,
         return JSONResponse(content={"result": "true"},
                             status_code=status.HTTP_200_OK)
 
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        raise e
     except Exception as e:
         await db.rollback()
         logger.error(f"Error putting like on tweet: {e}")
@@ -197,8 +197,8 @@ async def write_new_tweet(
         return JSONResponse(content=result,
                             status_code=status.HTTP_201_CREATED)
 
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        raise e
     except Exception as e:
         await db.rollback()
         logger.error(f"Error creating new tweet: {e}")
@@ -255,10 +255,8 @@ async def get_file_path(db: AsyncSession,
                      f"with file_id: {file_id}")
         result = await db.execute(
             select(Media.path).where(Media.id == file_id)
-        )  # Получаем только путь
-        file_path = (
-            result.scalar_one_or_none()
-        )  # Получаем один скалярный результат или None
+        )
+        file_path = result.scalar_one_or_none()
 
         if file_path is None:
             logger.error(f"File with id {file_id} not found")
@@ -273,8 +271,7 @@ async def get_file_path(db: AsyncSession,
 
         logger.debug(f"File path: {file_path}")
         return file_path
-    except HTTPException as e:
-        raise e  # Пробрасываем HTTPException дальше
+
     except Exception as e:
         logger.error(f"Error getting file path: {e}")
         raise HTTPException(
@@ -285,6 +282,7 @@ async def get_file_path(db: AsyncSession,
                 "error_message": "Could not retrieve file path",
             },
         )
+
 
 
 async def delete_tweet_by_user(db: AsyncSession,
@@ -303,7 +301,7 @@ async def delete_tweet_by_user(db: AsyncSession,
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "result": "false",
-                    "error_type": "Error",
+                    "error_type": "ValueError",
                     "error_message": "Tweet not found or "
                                      "does not belong to the user",
                 },
@@ -346,7 +344,7 @@ async def follow_user(db: AsyncSession,
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "result": "false",
-                    "error_type": "Error",
+                    "error_type": "ValueError",
                     "error_message": "User with id not found",
                 },
             )
@@ -429,7 +427,7 @@ async def delete_following(db: AsyncSession,
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "result": "false",
-                    "error_type": "Error",
+                    "error_type": "ValueError",
                     "error_message": "User with id not found",
                 },
             )
@@ -547,8 +545,8 @@ async def get_info_user(db: AsyncSession,
             status_code=status.HTTP_200_OK,
         )
 
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(f"Ошибка при получении информации о пользователе: {e}")
         raise HTTPException(

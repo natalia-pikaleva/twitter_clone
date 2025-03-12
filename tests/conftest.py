@@ -1,15 +1,17 @@
 import pytest
 import pytest_asyncio
 import asyncio
-from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from main.app import app
-from main.models import Base, User, Tweet
+from main.models import Base
 from pytest_factoryboy import register
 from .factories import UserFactory, TweetFactory
 from httpx import AsyncClient, ASGITransport
 from main.database.db_init import get_db
+import sys
+
+sys.path.insert(0, '.')
 
 # Конфигурация тестовой БД
 TEST_SQLALCHEMY_DATABASE_URI = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
@@ -31,7 +33,6 @@ async def manage_test_database():
         await conn.run_sync(Base.metadata.drop_all)  # Удаляем таблицы после теста
 
 
-
 # Фикстура для тестовой сессии
 @pytest_asyncio.fixture
 async def db_session():
@@ -42,15 +43,6 @@ async def db_session():
             await session.rollback()
 
 
-
-# # Фикстура для фабрик
-# @pytest_asyncio.fixture(autouse=True)
-# async def setup_factories(db_session):
-#     UserFactory._meta.sqlalchemy_session = db_session
-#     TweetFactory._meta.sqlalchemy_session = db_session
-#     yield
-
-
 # Фикстура для тестового клиента
 @pytest_asyncio.fixture
 async def async_client(db_session):
@@ -58,14 +50,13 @@ async def async_client(db_session):
     app.dependency_overrides[get_db] = lambda: db_session
 
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+            transport=ASGITransport(app=app),
+            base_url="http://test"
     ) as client:
         yield client
 
     # Удаляем переопределение после завершения тестов
     app.dependency_overrides = {}
-
 
 
 @pytest.fixture(scope="session")
@@ -74,3 +65,9 @@ def event_loop():
     asyncio.set_event_loop(loop)
     yield loop
     loop.close()
+
+# Фикстура для создания тестового файла
+@pytest.fixture
+def test_file():
+    file_path = "tests/test_image.jpeg"
+    return file_path
