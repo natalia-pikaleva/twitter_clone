@@ -51,3 +51,111 @@ async def test_unfollowing(async_client, db_session):
                     await db_session.execute(select(SubscribedUser).where(SubscribedUser.follower_user_id == id_follow,
                                                                            SubscribedUser.subscribed_user_id == id_subscribe))).scalar()
                 assert subscribe is None
+
+@pytest.mark.asyncio
+async def test_unfollowing_invalid_api_key(async_client, db_session):
+    # Создаём пользователя и фолловера
+    user = User(
+        login="test_login",
+        api_key="123",
+        name="test_name",
+        surname="test_surname",
+    )
+
+    follower = User(
+        login="test_login_follower",
+        api_key="123follower",
+        name="test_name_follower",
+        surname="test_surname_follower",
+    )
+
+    db_session.add(user)
+    db_session.add(follower)
+    await db_session.flush()
+    await db_session.refresh(user)
+    await db_session.refresh(follower)
+
+    # Подписываем фолловера на пользователя
+    response = await async_client.post(
+        f"/api/users/{user.id}/follow",
+        headers={"api-key": follower.api_key}
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+    assert "result" in data
+    assert data["result"] == "true"
+
+    # Проверяем, что подписка в базе данных есть
+    subscribe = (
+        await db_session.execute(select(SubscribedUser).where(SubscribedUser.follower_user_id == follower.id,
+                                                              SubscribedUser.subscribed_user_id == user.id))).scalar()
+    assert subscribe is not None
+
+    # Отписываемся от пользователя, но используем неверный api-key
+    response = await async_client.delete(
+        f"/api/users/{user.id}/follow",
+        headers={"api-key": "invalid_api_key"}
+    )
+
+    assert response.status_code == 404
+    data = response.json()
+
+    assert data["result"] == "false"
+    assert data["error_type"] == "ValueError"
+
+
+
+@pytest.mark.asyncio
+async def test_unfollowing_invalid_id(async_client, db_session):
+    # Создаём пользователя и фолловера
+    user = User(
+        login="test_login",
+        api_key="123",
+        name="test_name",
+        surname="test_surname",
+    )
+
+    follower = User(
+        login="test_login_follower",
+        api_key="123follower",
+        name="test_name_follower",
+        surname="test_surname_follower",
+    )
+
+    db_session.add(user)
+    db_session.add(follower)
+    await db_session.flush()
+    await db_session.refresh(user)
+    await db_session.refresh(follower)
+
+    # Подписываем фолловера на пользователя
+    response = await async_client.post(
+        f"/api/users/{user.id}/follow",
+        headers={"api-key": follower.api_key}
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+    assert "result" in data
+    assert data["result"] == "true"
+
+    # Проверяем, что подписка в базе данных есть
+    subscribe = (
+        await db_session.execute(select(SubscribedUser).where(SubscribedUser.follower_user_id == follower.id,
+                                                              SubscribedUser.subscribed_user_id == user.id))).scalar()
+    assert subscribe is not None
+
+    # Отписываемся от пользователя, но используем неверный id пользователя
+    response = await async_client.delete(
+        f"/api/users/{user.id * 10}/follow",
+        headers={"api-key": follower.api_key}
+    )
+
+    assert response.status_code == 404
+    data = response.json()
+
+    assert data["result"] == "false"
+    assert data["error_type"] == "ValueError"

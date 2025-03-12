@@ -93,3 +93,33 @@ async def test_create_tweet_with_media(async_client, db_session):
     assert tweet is not None
     assert tweet.content == "test text for tweet"
     assert media_id in tweet.attachments
+
+@pytest.mark.asyncio
+async def test_create_tweet_invalid_api_key(async_client, db_session):
+    # Создаём пользователя
+    user = User(
+        login="test_login",
+        api_key="123",
+        name="test_name",
+        surname="test_surname",
+    )
+
+    db_session.add(user)
+    await db_session.flush()
+    await db_session.refresh(user)
+
+    db_user = (await db_session.execute(select(User).where(User.api_key == "123"))).scalar()
+    assert db_user is not None
+    assert db_user.api_key == "123"
+
+    response = await async_client.post(
+        "/api/tweets",
+        headers={"api-key": "invalid_api_key"},
+        json={"tweet_data": "test text for tweet", "tweet_media_ids": []}
+    )
+
+    assert response.status_code == 404
+    data = response.json()
+
+    assert data["result"] == "false"
+    assert data["error_type"] == "ValueError"
