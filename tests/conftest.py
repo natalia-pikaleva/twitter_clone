@@ -14,7 +14,7 @@ import sys
 sys.path.insert(0, '.')
 
 # Конфигурация тестовой БД
-TEST_SQLALCHEMY_DATABASE_URI = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
+TEST_SQLALCHEMY_DATABASE_URI = "postgresql+asyncpg://postgres:postgres@postgres:5432/test_db"
 test_engine = create_async_engine(TEST_SQLALCHEMY_DATABASE_URI)
 TestAsyncSessionLocal = sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
 
