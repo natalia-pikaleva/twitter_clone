@@ -3,8 +3,7 @@ import csv
 import json
 import logging
 import os
-from typing import List, AsyncGenerator
-
+from typing import AsyncGenerator, List
 
 import asyncpg
 from sqlalchemy import select
@@ -13,10 +12,11 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from main.models import Base, LikeTweet, Media, SubscribedUser, Tweet, User
+from main.models import (Base, LikeTweet, Media,
+                         SubscribedUser, Tweet, User)
 
 SQLALCHEMY_DATABASE_URI = (
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/twitter_db"
+    "postgresql+asyncpg://postgres:postgres@postgres:5432/twitter_db"
 )
 
 # engine = create_async_engine(SQLALCHEMY_DATABASE_URI, echo=True)
@@ -86,8 +86,8 @@ async def insert_following(session: AsyncSession) -> None:
         return
 
     try:
-        with (open(following_file_path, "r", encoding="UTF-8")
-              as following_file):
+        with open(following_file_path, "r",
+                  encoding="UTF-8") as following_file:
             data = json.load(following_file)
             logger.info(f"Loaded data: {data}")
 
@@ -123,7 +123,7 @@ async def load_tweets_data(file_path: str) -> dict:
 
 
 async def insert_media(
-        session: AsyncSession,
+    session: AsyncSession,
         UPLOAD_FOLDER_ABSOLUTE: str,
         attachments_list: List[str]
 ) -> List[int]:
@@ -135,7 +135,7 @@ async def insert_media(
         session.add(media)
         await session.commit()
         await session.refresh(media)
-        media_ids.append(media.id)
+        media_ids.append(int(media.id))
         logger.info("Media saved in db")
     return media_ids
 
@@ -231,7 +231,7 @@ async def check_db_exists(db_url: str) -> bool:
         conn = await asyncpg.connect(
             user="postgres",
             password="postgres",
-            host="localhost",
+            host="postgres",
             database=db_url.split("/")[-1],
         )
         await conn.close()
@@ -249,7 +249,7 @@ async def create_database(db_name: str) -> bool:
         conn = await asyncpg.connect(
             user="postgres",
             password="postgres",
-            host="localhost",
+            host="postgres",
             database="postgres",
         )
         await conn.execute(f"CREATE DATABASE {db_name}")
@@ -270,7 +270,7 @@ async def drop_database(db_name) -> None:
     """
     try:
         conn = await asyncpg.connect(
-            host="localhost", port=5432, user="postgres", password="postgres"
+            host="postgres", port=5432, user="postgres", password="postgres"
         )
         await conn.execute(f"DROP DATABASE IF EXISTS {db_name};")
         await conn.close()
@@ -285,7 +285,7 @@ async def start_bd(UPLOAD_FOLDER_ABSOLUTE) -> None:
     """
     try:
         SQLALCHEMY_DATABASE_URI = (
-            "postgresql+asyncpg://postgres:postgres@localhost:5432/twitter_db"
+            "postgresql+asyncpg://postgres:postgres@postgres:5432/twitter_db"
         )
         db_name = "twitter_db"
 
@@ -309,29 +309,32 @@ async def start_bd(UPLOAD_FOLDER_ABSOLUTE) -> None:
                 await conn.run_sync(Base.metadata.create_all)
             logger.info("Tables created successfully")
 
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(select(User))
-                users = result.scalars().all()
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(User))
+            users = result.scalars().all()
 
-                if not users:
-                    await insert_users(session)
-                else:
-                    logger.info("Table users is exists in database")
+            if not users:
+                logger.info("Table users is not exists. Start creating")
+                await insert_users(session)
+            else:
+                logger.info("Table users is exists in database")
 
-                result = await session.execute(select(Tweet))
-                tweets = result.scalars().all()
-                if not tweets:
-                    await insert_tweets_and_likes(session,
-                                                  UPLOAD_FOLDER_ABSOLUTE)
-                else:
-                    logger.info("Table tweets is exists in database")
+            result = await session.execute(select(Tweet))
+            tweets = result.scalars().all()
+            if not tweets:
+                logger.info("Table tweets is not exists. Start creating")
+                await insert_tweets_and_likes(session,
+                                              UPLOAD_FOLDER_ABSOLUTE)
+            else:
+                logger.info("Table tweets is exists in database")
 
-                result = await session.execute(select(SubscribedUser))
-                subscribes = result.scalars().all()
-                if not subscribes:
-                    await insert_following(session)
-                else:
-                    logger.info("Table subscribed_users is exists in database")
+            result = await session.execute(select(SubscribedUser))
+            subscribes = result.scalars().all()
+            if not subscribes:
+                logger.info("Table subscribes is not exists. Start creating")
+                await insert_following(session)
+            else:
+                logger.info("Table subscribed_users is exists in database")
 
             await engine.dispose()
 
@@ -339,5 +342,3 @@ async def start_bd(UPLOAD_FOLDER_ABSOLUTE) -> None:
         logger.error(f"Operational error during database setup: {e}")
     except Exception as e:
         logger.error(f"Error during database setup: {e}")
-
-

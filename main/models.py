@@ -47,7 +47,7 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="selectin"
-    )
+        )
     follower = relationship(
         "SubscribedUser",
         foreign_keys=[SubscribedUser.subscribed_user_id],
