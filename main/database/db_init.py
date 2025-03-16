@@ -12,8 +12,7 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from main.models import (Base, LikeTweet, Media,
-                         SubscribedUser, Tweet, User)
+from main.models import Base, LikeTweet, Media, SubscribedUser, Tweet, User
 
 SQLALCHEMY_DATABASE_URI = (
     "postgresql+asyncpg://postgres:postgres@postgres:5432/twitter_db"
@@ -22,9 +21,7 @@ SQLALCHEMY_DATABASE_URI = (
 # engine = create_async_engine(SQLALCHEMY_DATABASE_URI, echo=True)
 engine = create_async_engine(SQLALCHEMY_DATABASE_URI)
 
-AsyncSessionLocal = sessionmaker(engine,
-                                 expire_on_commit=False,
-                                 class_=AsyncSession)
+AsyncSessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -32,8 +29,7 @@ logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter("%(asctime)s - %(name)s - "
-                              "%(levelname)s - %(message)s")
+formatter = logging.Formatter("%(asctime)s - %(name)s - " "%(levelname)s - %(message)s")
 console_handler.setFormatter(formatter)
 
 logger.addHandler(console_handler)
@@ -86,8 +82,7 @@ async def insert_following(session: AsyncSession) -> None:
         return
 
     try:
-        with open(following_file_path, "r",
-                  encoding="UTF-8") as following_file:
+        with open(following_file_path, "r", encoding="UTF-8") as following_file:
             data = json.load(following_file)
             logger.info(f"Loaded data: {data}")
 
@@ -123,9 +118,7 @@ async def load_tweets_data(file_path: str) -> dict:
 
 
 async def insert_media(
-    session: AsyncSession,
-        UPLOAD_FOLDER_ABSOLUTE: str,
-        attachments_list: List[str]
+    session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str, attachments_list: List[str]
 ) -> List[int]:
     """Вставка медиа в базу данных"""
     media_ids = []
@@ -182,8 +175,7 @@ async def insert_likes(session: AsyncSession, data: dict) -> None:
         tweet_id = tweet_id_map.get(tweet_content)
 
         if not tweet_id:
-            logger.warning(f"Could not find tweet_id for content: "
-                           f"{tweet_content}")
+            logger.warning(f"Could not find tweet_id for content: " f"{tweet_content}")
             continue
 
         for user_id in tweet.get("likes_list", []):
@@ -323,8 +315,7 @@ async def start_bd(UPLOAD_FOLDER_ABSOLUTE) -> None:
             tweets = result.scalars().all()
             if not tweets:
                 logger.info("Table tweets is not exists. Start creating")
-                await insert_tweets_and_likes(session,
-                                              UPLOAD_FOLDER_ABSOLUTE)
+                await insert_tweets_and_likes(session, UPLOAD_FOLDER_ABSOLUTE)
             else:
                 logger.info("Table tweets is exists in database")
 

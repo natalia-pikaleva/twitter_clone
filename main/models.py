@@ -9,13 +9,11 @@ class SubscribedUser(Base):
     __tablename__ = "subscribed_users"
     id = Column(Integer, primary_key=True, autoincrement=True)
     follower_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    subscribed_user_id = Column(Integer, ForeignKey("users.id"),
-                                nullable=False)
+    subscribed_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     __table_args__ = (
         UniqueConstraint(
-            "follower_user_id", "subscribed_user_id",
-            name="unique_user_subscribed"
+            "follower_user_id", "subscribed_user_id", name="unique_user_subscribed"
         ),
     )
 
@@ -43,11 +41,8 @@ class User(Base):
     surname = Column(String(50), nullable=False)
 
     tweet = relationship(
-        "Tweet",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy="selectin"
-        )
+        "Tweet", back_populates="user", cascade="all, delete-orphan", lazy="selectin"
+    )
     follower = relationship(
         "SubscribedUser",
         foreign_keys=[SubscribedUser.subscribed_user_id],

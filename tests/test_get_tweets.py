@@ -15,9 +15,13 @@ async def test_get_tweets(async_client, db_session):
 
     # Создадим у каждого пользователя случайное количество твитов
     for user_id in list_ids:
-        count_tweets = random.randint(1, 5)  # Убедитесь, что хотя бы один твит создается
+        count_tweets = random.randint(
+            1, 5
+        )  # Убедитесь, что хотя бы один твит создается
         for index in range(count_tweets):
-            tweet = Tweet(user_id=user_id, content=f"test_text_{user_id} {index}", attachments=[])
+            tweet = Tweet(
+                user_id=user_id, content=f"test_text_{user_id} {index}", attachments=[]
+            )
             db_session.add(tweet)
             await db_session.flush()
             await db_session.refresh(tweet)
@@ -27,13 +31,11 @@ async def test_get_tweets(async_client, db_session):
         for j in range(i + 1, len(list_ids)):
             if random.random() < 0.5:  # Подписываемся с вероятностью 50%
                 subscription = SubscribedUser(
-                    follower_user_id=list_ids[i],
-                    subscribed_user_id=list_ids[j]
+                    follower_user_id=list_ids[i], subscribed_user_id=list_ids[j]
                 )
                 db_session.add(subscription)
                 await db_session.flush()
                 await db_session.refresh(subscription)
-
 
     # Создадим лайки для твитов
     tweets = (await db_session.execute(select(Tweet))).scalars().all()
@@ -46,10 +48,11 @@ async def test_get_tweets(async_client, db_session):
 
     # Проверяем эндпоинт для каждого пользователя
     for user_id in list_ids:
-        user = (await db_session.execute(select(User).where(User.id == user_id))).scalar()
+        user = (
+            await db_session.execute(select(User).where(User.id == user_id))
+        ).scalar()
         response = await async_client.get(
-            "/api/tweets",
-            headers={"api-key": user.api_key}
+            "/api/tweets", headers={"api-key": user.api_key}
         )
         assert response.status_code == 200
 
@@ -58,6 +61,10 @@ async def test_get_tweets(async_client, db_session):
         assert "tweets" in tweets_data
 
         # Проверяем, что все твиты пользователя в ответе
-        user_tweets = (await db_session.execute(select(Tweet).where(Tweet.user_id == user_id))).scalars().all()
+        user_tweets = (
+            (await db_session.execute(select(Tweet).where(Tweet.user_id == user_id)))
+            .scalars()
+            .all()
+        )
         for tweet in user_tweets:
             assert any(t["id"] == tweet.id for t in tweets_data["tweets"])

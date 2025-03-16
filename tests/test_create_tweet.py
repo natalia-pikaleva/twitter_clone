@@ -18,14 +18,16 @@ async def test_create_tweet_without_media(async_client, db_session):
     await db_session.flush()
     await db_session.refresh(user)
 
-    db_user = (await db_session.execute(select(User).where(User.api_key == "123"))).scalar()
+    db_user = (
+        await db_session.execute(select(User).where(User.api_key == "123"))
+    ).scalar()
     assert db_user is not None
     assert db_user.api_key == "123"
 
     response = await async_client.post(
         "/api/tweets",
         headers={"api-key": user.api_key},
-        json={"tweet_data": "test text for tweet", "tweet_media_ids": []}
+        json={"tweet_data": "test text for tweet", "tweet_media_ids": []},
     )
 
     assert response.status_code == 201
@@ -34,7 +36,11 @@ async def test_create_tweet_without_media(async_client, db_session):
     assert tweet_data["result"] == "true"
     assert tweet_data["tweet_id"] is not None
 
-    tweet = (await db_session.execute(select(Tweet).where(Tweet.id == tweet_data["tweet_id"]))).scalar()
+    tweet = (
+        await db_session.execute(
+            select(Tweet).where(Tweet.id == tweet_data["tweet_id"])
+        )
+    ).scalar()
     assert tweet is not None
     assert tweet.content == "test text for tweet"
 
@@ -53,7 +59,9 @@ async def test_create_tweet_with_media(async_client, db_session):
     await db_session.flush()
     await db_session.refresh(user)
 
-    db_user = (await db_session.execute(select(User).where(User.api_key == "123"))).scalar()
+    db_user = (
+        await db_session.execute(select(User).where(User.api_key == "123"))
+    ).scalar()
     assert db_user is not None
     assert db_user.api_key == "123"
 
@@ -66,7 +74,7 @@ async def test_create_tweet_with_media(async_client, db_session):
         response = await async_client.post(
             "/api/medias",
             headers={"api-key": user.api_key},
-            files=files  # Передаём файл через параметр files
+            files=files,  # Передаём файл через параметр files
         )
 
     assert response.status_code == 200
@@ -80,7 +88,7 @@ async def test_create_tweet_with_media(async_client, db_session):
     response = await async_client.post(
         "/api/tweets",
         headers={"api-key": user.api_key},
-        json={"tweet_data": "test text for tweet", "tweet_media_ids": [media_id]}
+        json={"tweet_data": "test text for tweet", "tweet_media_ids": [media_id]},
     )
 
     assert response.status_code == 201
@@ -89,10 +97,15 @@ async def test_create_tweet_with_media(async_client, db_session):
     assert tweet_data["result"] == "true"
     assert tweet_data["tweet_id"] is not None
 
-    tweet = (await db_session.execute(select(Tweet).where(Tweet.id == tweet_data["tweet_id"]))).scalar()
+    tweet = (
+        await db_session.execute(
+            select(Tweet).where(Tweet.id == tweet_data["tweet_id"])
+        )
+    ).scalar()
     assert tweet is not None
     assert tweet.content == "test text for tweet"
     assert media_id in tweet.attachments
+
 
 @pytest.mark.asyncio
 async def test_create_tweet_invalid_api_key(async_client, db_session):
@@ -108,14 +121,16 @@ async def test_create_tweet_invalid_api_key(async_client, db_session):
     await db_session.flush()
     await db_session.refresh(user)
 
-    db_user = (await db_session.execute(select(User).where(User.api_key == "123"))).scalar()
+    db_user = (
+        await db_session.execute(select(User).where(User.api_key == "123"))
+    ).scalar()
     assert db_user is not None
     assert db_user.api_key == "123"
 
     response = await async_client.post(
         "/api/tweets",
         headers={"api-key": "invalid_api_key"},
-        json={"tweet_data": "test text for tweet", "tweet_media_ids": []}
+        json={"tweet_data": "test text for tweet", "tweet_media_ids": []},
     )
 
     assert response.status_code == 404

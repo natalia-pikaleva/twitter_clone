@@ -1,22 +1,26 @@
-import asyncio
 import logging
 import os
 import uuid
 from typing import List
 
 from aiofiles import open as aio_open
-from main.database.db_utils import (download_file, write_new_tweet, get_file_path,
-                                    delete_tweet_by_user, get_info_user, delete_following,
-                                    follow_user, put_or_delete_like_on_tweet,
-                                    get_info_user, get_tweets_by_user_api_key)
+from main.database.db_utils import (
+    download_file,
+    write_new_tweet,
+    get_file_path,
+    delete_tweet_by_user,
+    delete_following,
+    follow_user,
+    put_or_delete_like_on_tweet,
+    get_info_user,
+    get_tweets_by_user_api_key,
+)
 
 from main.database.db_init import get_db, start_bd
-from fastapi import (Depends, FastAPI, File, Header,
-                     HTTPException, Request, UploadFile)
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
-    RedirectResponse,
     StreamingResponse,
 )
 from fastapi.staticfiles import StaticFiles
@@ -32,8 +36,7 @@ logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter("%(asctime)s - %(name)s - "
-                              "%(levelname)s - %(message)s")
+formatter = logging.Formatter("%(asctime)s - %(name)s - " "%(levelname)s - %(message)s")
 console_handler.setFormatter(formatter)
 
 logger.addHandler(console_handler)
@@ -53,8 +56,7 @@ app = FastAPI()
 
 # Настройка статических файлов
 app.mount(
-    "/static", StaticFiles(directory=STATIC_FOLDER_ABSOLUTE,
-                           html=True), name="static"
+    "/static", StaticFiles(directory=STATIC_FOLDER_ABSOLUTE, html=True), name="static"
 )
 
 
@@ -99,10 +101,10 @@ async def read_root() -> str:
 
 @app.post("/api/tweets")
 async def create_tweet(
-        tweet_data: TweetCreate,
-        request: Request,
-        db: AsyncSession = Depends(get_db),  # noqa: B008
-        api_key: str = Header(..., alias="api-key"),
+    tweet_data: TweetCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     logger.debug("create_tweet function was called!")
 
@@ -118,9 +120,9 @@ async def create_tweet(
 
 @app.post("/api/medias")
 async def upload_media(
-        file: UploadFile = File(...),
-        db: AsyncSession = Depends(get_db),  # noqa: B008
-        api_key: str = Header(..., alias="api-key"),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     logger.debug("upload_media function was called!")
 
@@ -161,9 +163,7 @@ async def upload_media(
     return await download_file(db, api_key, filepath)
 
 
-async def get_media(
-        id: int,
-        db: AsyncSession = Depends(get_db)) -> StreamingResponse:
+async def get_media(id: int, db: AsyncSession = Depends(get_db)) -> StreamingResponse:
     logger.debug(f"get_media function was called with id: {id}")
     media_path = await get_file_path(db, id)
     logger.debug(f"Media path retrieved: {media_path}")
@@ -209,7 +209,7 @@ async def get_media(
 
 @app.get("/{id}")
 async def get_media_endpoint(
-        id: int, db: AsyncSession = Depends(get_db)
+    id: int, db: AsyncSession = Depends(get_db)
 ) -> JSONResponse:  # noqa: B008
     try:
         id = int(id)  # Преобразуем id в целое число
@@ -228,17 +228,17 @@ async def get_media_endpoint(
 
 @app.delete("/api/tweets/{id}")
 async def delete_tweet(
-        id: int,
-        db: AsyncSession = Depends(get_db),  # noqa: B008
-        api_key: str = Header(..., alias="api-key"),
+    id: int,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     return await delete_tweet_by_user(db, api_key, id)
 
 
 @app.get("/api/users/me")
 async def get_current_user(
-        db: AsyncSession = Depends(get_db),  # noqa: B008
-        api_key: str = Header(..., alias="api-key"),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     logger.debug("get_current_user function was called!")
     return await get_info_user(db, api_key=api_key)
@@ -246,8 +246,8 @@ async def get_current_user(
 
 @app.get("/api/tweets")
 async def get_user_tweets(
-        db: AsyncSession = Depends(get_db),  # noqa: B008
-        api_key: str = Header(..., alias="api-key"),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     logger.debug("get_user_tweets function was called!")
 
@@ -256,27 +256,27 @@ async def get_user_tweets(
 
 @app.post("/api/tweets/{id}/likes")
 async def put_and_delete_like(
-        id: int,
-        db: AsyncSession = Depends(get_db),  # noqa: B008
-        api_key: str = Header(..., alias="api-key"),
+    id: int,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     return await put_or_delete_like_on_tweet(db, api_key, id)
 
 
 @app.post("/api/users/{id}/follow")
 async def post_follow_user(
-        id: int,
-        db: AsyncSession = Depends(get_db),  # noqa: B008
-        api_key: str = Header(..., alias="api-key"),
+    id: int,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     return await follow_user(db, api_key, id)
 
 
 @app.delete("/api/users/{id}/follow")
 async def unfollow_user(
-        id: int,
-        db: AsyncSession = Depends(get_db),  # noqa: B008
-        api_key: str = Header(..., alias="api-key"),
+    id: int,
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     return await delete_following(db, api_key, id)
 
@@ -284,7 +284,7 @@ async def unfollow_user(
 @app.get("/api/users/{id}")
 @app.get("/profile/{id}")
 async def get_user_profile(
-        id: int, db: AsyncSession = Depends(get_db)
+    id: int, db: AsyncSession = Depends(get_db)
 ) -> JSONResponse:  # noqa: B008
     return await get_info_user(db, user_id=id)
 

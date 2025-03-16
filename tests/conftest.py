@@ -11,12 +11,16 @@ from httpx import AsyncClient, ASGITransport
 from main.database.db_init import get_db
 import sys
 
-sys.path.insert(0, '.')
+sys.path.insert(0, ".")
 
 # Конфигурация тестовой БД
-TEST_SQLALCHEMY_DATABASE_URI = "postgresql+asyncpg://postgres:postgres@postgres:5432/test_db"
+TEST_SQLALCHEMY_DATABASE_URI = (
+    "postgresql+asyncpg://postgres:postgres@postgres:5432/test_db"
+)
 test_engine = create_async_engine(TEST_SQLALCHEMY_DATABASE_URI)
-TestAsyncSessionLocal = sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
+TestAsyncSessionLocal = sessionmaker(
+    test_engine, expire_on_commit=False, class_=AsyncSession
+)
 
 # Регистрация фабрик
 register(UserFactory)
@@ -50,8 +54,7 @@ async def async_client(db_session):
     app.dependency_overrides[get_db] = lambda: db_session
 
     async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client
 
@@ -65,6 +68,7 @@ def event_loop():
     asyncio.set_event_loop(loop)
     yield loop
     loop.close()
+
 
 # Фикстура для создания тестового файла
 @pytest.fixture
