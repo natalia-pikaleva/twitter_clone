@@ -40,7 +40,9 @@ async def test_get_media_success(async_client, test_file, db_session):
     db_session.add(media_file)
     await db_session.commit()
 
-    db_media = (await db_session.execute(select(Media).where(Media.id == 1))).scalar_one_or_none()
+    db_media = (
+        await db_session.execute(select(Media).where(Media.id == 1))
+    ).scalar_one_or_none()
     assert db_media is not None
     assert db_media.id == 1
     assert db_media.path == str(test_file_path)
@@ -60,7 +62,6 @@ async def test_get_media_success(async_client, test_file, db_session):
         assert response.status_code == 200
         assert response.content == b"fake_image_data"
         assert response.headers["content-type"] == "image/jpeg"
-
 
 
 @pytest.mark.asyncio

@@ -35,7 +35,9 @@ class UserFactory(AsyncSQLAlchemyModelFactory):
     surname = Faker("last_name")
     login = Faker("text", max_nb_chars=10)
     api_key = factory.LazyFunction(
-        lambda: ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+        lambda: "".join(
+            secrets.choice(string.ascii_letters + string.digits) for _ in range(10)
+        )
     )
 
 
@@ -47,7 +49,8 @@ class TweetFactory(AsyncSQLAlchemyModelFactory):
     user = SubFactory(UserFactory)
     content = Faker("text", max_nb_chars=500)  # Случайный текст
     attachments = factory.List(
-        [factory.LazyFunction(lambda: random.randint(1, 100)) for _ in range(3)])
+        [factory.LazyFunction(lambda: random.randint(1, 100)) for _ in range(3)]
+    )
 
 
 # class LikeTweetFactory(AsyncSQLAlchemyModelFactory):

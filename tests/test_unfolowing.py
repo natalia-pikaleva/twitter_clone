@@ -16,10 +16,12 @@ async def test_unfollowing(async_client, db_session):
     for id_follow in list_ids:
         for id_subscribe in list_ids:
             if id_follow != id_subscribe:
-                user = (await db_session.execute(select(User).where(User.id == id_follow))).scalar()
+                user = (
+                    await db_session.execute(select(User).where(User.id == id_follow))
+                ).scalar()
                 response = await async_client.post(
                     f"/api/users/{id_subscribe}/follow",
-                    headers={"api-key": user.api_key}
+                    headers={"api-key": user.api_key},
                 )
                 assert response.status_code == 201
 
@@ -28,18 +30,25 @@ async def test_unfollowing(async_client, db_session):
                 assert data["result"] == "true"
 
                 subscribe = (
-                    await db_session.execute(select(SubscribedUser).where(SubscribedUser.follower_user_id == id_follow,
-                                                                           SubscribedUser.subscribed_user_id == id_subscribe))).scalar()
+                    await db_session.execute(
+                        select(SubscribedUser).where(
+                            SubscribedUser.follower_user_id == id_follow,
+                            SubscribedUser.subscribed_user_id == id_subscribe,
+                        )
+                    )
+                ).scalar()
                 assert subscribe is not None
 
     # Удалим подписки между пользователями
     for id_follow in list_ids:
         for id_subscribe in list_ids:
             if id_follow != id_subscribe:
-                user = (await db_session.execute(select(User).where(User.id == id_follow))).scalar()
+                user = (
+                    await db_session.execute(select(User).where(User.id == id_follow))
+                ).scalar()
                 response = await async_client.delete(
                     f"/api/users/{id_subscribe}/follow",
-                    headers={"api-key": user.api_key}
+                    headers={"api-key": user.api_key},
                 )
                 assert response.status_code == 200
 
@@ -48,9 +57,15 @@ async def test_unfollowing(async_client, db_session):
                 assert data["result"] == "true"
 
                 subscribe = (
-                    await db_session.execute(select(SubscribedUser).where(SubscribedUser.follower_user_id == id_follow,
-                                                                           SubscribedUser.subscribed_user_id == id_subscribe))).scalar()
+                    await db_session.execute(
+                        select(SubscribedUser).where(
+                            SubscribedUser.follower_user_id == id_follow,
+                            SubscribedUser.subscribed_user_id == id_subscribe,
+                        )
+                    )
+                ).scalar()
                 assert subscribe is None
+
 
 @pytest.mark.asyncio
 async def test_unfollowing_invalid_api_key(async_client, db_session):
@@ -77,8 +92,7 @@ async def test_unfollowing_invalid_api_key(async_client, db_session):
 
     # Подписываем фолловера на пользователя
     response = await async_client.post(
-        f"/api/users/{user.id}/follow",
-        headers={"api-key": follower.api_key}
+        f"/api/users/{user.id}/follow", headers={"api-key": follower.api_key}
     )
 
     assert response.status_code == 201
@@ -89,14 +103,18 @@ async def test_unfollowing_invalid_api_key(async_client, db_session):
 
     # Проверяем, что подписка в базе данных есть
     subscribe = (
-        await db_session.execute(select(SubscribedUser).where(SubscribedUser.follower_user_id == follower.id,
-                                                              SubscribedUser.subscribed_user_id == user.id))).scalar()
+        await db_session.execute(
+            select(SubscribedUser).where(
+                SubscribedUser.follower_user_id == follower.id,
+                SubscribedUser.subscribed_user_id == user.id,
+            )
+        )
+    ).scalar()
     assert subscribe is not None
 
     # Отписываемся от пользователя, но используем неверный api-key
     response = await async_client.delete(
-        f"/api/users/{user.id}/follow",
-        headers={"api-key": "invalid_api_key"}
+        f"/api/users/{user.id}/follow", headers={"api-key": "invalid_api_key"}
     )
 
     assert response.status_code == 404
@@ -104,7 +122,6 @@ async def test_unfollowing_invalid_api_key(async_client, db_session):
 
     assert data["result"] == "false"
     assert data["error_type"] == "ValueError"
-
 
 
 @pytest.mark.asyncio
@@ -132,8 +149,7 @@ async def test_unfollowing_invalid_id(async_client, db_session):
 
     # Подписываем фолловера на пользователя
     response = await async_client.post(
-        f"/api/users/{user.id}/follow",
-        headers={"api-key": follower.api_key}
+        f"/api/users/{user.id}/follow", headers={"api-key": follower.api_key}
     )
 
     assert response.status_code == 201
@@ -144,14 +160,18 @@ async def test_unfollowing_invalid_id(async_client, db_session):
 
     # Проверяем, что подписка в базе данных есть
     subscribe = (
-        await db_session.execute(select(SubscribedUser).where(SubscribedUser.follower_user_id == follower.id,
-                                                              SubscribedUser.subscribed_user_id == user.id))).scalar()
+        await db_session.execute(
+            select(SubscribedUser).where(
+                SubscribedUser.follower_user_id == follower.id,
+                SubscribedUser.subscribed_user_id == user.id,
+            )
+        )
+    ).scalar()
     assert subscribe is not None
 
     # Отписываемся от пользователя, но используем неверный id пользователя
     response = await async_client.delete(
-        f"/api/users/{user.id * 10}/follow",
-        headers={"api-key": follower.api_key}
+        f"/api/users/{user.id * 10}/follow", headers={"api-key": follower.api_key}
     )
 
     assert response.status_code == 404

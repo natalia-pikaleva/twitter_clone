@@ -27,7 +27,7 @@ async def test_upload_file(async_client, db_session):
         response = await async_client.post(
             "/api/medias",
             headers={"api-key": user.api_key},
-            files=files  # Передаём файл через параметр files
+            files=files,  # Передаём файл через параметр files
         )
 
     assert response.status_code == 200
@@ -52,10 +52,7 @@ async def test_upload_file_without_file(async_client, db_session):
     await db_session.refresh(user)
 
     # Отправляем запрос без файла
-    response = await async_client.post(
-        "/api/medias",
-        headers={"api-key": user.api_key}
-    )
+    response = await async_client.post("/api/medias", headers={"api-key": user.api_key})
 
     assert response.status_code == 422
     data = response.json()
@@ -89,7 +86,7 @@ async def test_upload_file_not_allowed(async_client, db_session):
         response = await async_client.post(
             "/api/medias",
             headers={"api-key": user.api_key},
-            files=files  # Передаём файл через параметр files
+            files=files,  # Передаём файл через параметр files
         )
 
     assert response.status_code == 400

@@ -7,8 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from main.models import (LikeTweet, Media, SubscribedUser,
-                         Tweet, User)
+from main.models import LikeTweet, Media, SubscribedUser, Tweet, User
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -16,8 +15,7 @@ logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter("%(asctime)s - %(name)s - "
-                              "%(levelname)s - %(message)s")
+formatter = logging.Formatter("%(asctime)s - %(name)s - " "%(levelname)s - %(message)s")
 console_handler.setFormatter(formatter)
 
 logger.addHandler(console_handler)
@@ -41,8 +39,7 @@ async def check_api_key_user(db: AsyncSession, api_key: str) -> User:
     return user
 
 
-async def get_tweets_by_user_api_key(db: AsyncSession,
-                                     api_key: str) -> JSONResponse:
+async def get_tweets_by_user_api_key(db: AsyncSession, api_key: str) -> JSONResponse:
     """
     Асинхронный поиск твитов пользователей, на которых подписан
     пользователь по его api-key
@@ -57,8 +54,7 @@ async def get_tweets_by_user_api_key(db: AsyncSession,
         subscribed_users = result.scalars().all()
 
         # Получаем id пользователей, на которых подписан наш пользователь
-        subscribed_user_ids = [su.subscribed_user_id
-                               for su in subscribed_users]
+        subscribed_user_ids = [su.subscribed_user_id for su in subscribed_users]
 
         # Если пользователь не подписан ни на кого, то возвращаем пустой список
         if not subscribed_user_ids:
@@ -87,9 +83,7 @@ async def get_tweets_by_user_api_key(db: AsyncSession,
                 "id": tweet.id,
                 "content": tweet.content,
                 "attachments": tweet.attachments,
-                "author":
-                    {"id": author.id,
-                     "name": f"{author.name} {author.surname}"},
+                "author": {"id": author.id, "name": f"{author.name} {author.surname}"},
                 "likes": likes_ids,
                 "likes_count": likes_count,
                 "is_subscribed": is_subscribed,
@@ -98,8 +92,7 @@ async def get_tweets_by_user_api_key(db: AsyncSession,
 
         # Сортируем твиты по количеству лайков в порядке убывания
         # среди подписок
-        data_tweets.sort(key=lambda x: (not x["is_subscribed"],
-                                        -x["likes_count"]))
+        data_tweets.sort(key=lambda x: (not x["is_subscribed"], -x["likes_count"]))
 
         content = {"result": "true", "tweets": data_tweets}
         return JSONResponse(content=content, status_code=status.HTTP_200_OK)
@@ -124,8 +117,7 @@ async def put_or_delete_like_on_tweet(
     try:
         user = await check_api_key_user(db, api_key)
 
-        result = await db.execute(select(Tweet).
-                                  filter_by(id=tweet_id).limit(1))
+        result = await db.execute(select(Tweet).filter_by(id=tweet_id).limit(1))
         tweet = result.scalars().first()
         if not tweet:
             logger.error(f"tweet with id {tweet_id} do not found")
@@ -144,22 +136,19 @@ async def put_or_delete_like_on_tweet(
         )
         like_tweet = result.scalars().first()
         if like_tweet is None:  # лайк не существует, устанавливаем его
-            logger.info(f"Like do not exist for "
-                        f"user {user.id} on tweet {tweet_id}")
+            logger.info(f"Like do not exist for " f"user {user.id} on tweet {tweet_id}")
             like_tweet = LikeTweet(tweet_id=tweet_id, user_id=user.id)
             db.add(like_tweet)
             logger.info(f"Like created for user {user.id} on tweet {tweet_id}")
         else:  # лайк существует, удаляем его
             logger.info(
-                f"Like already exists for user "
-                f"{user.id} on tweet {tweet_id}"
+                f"Like already exists for user " f"{user.id} on tweet {tweet_id}"
             )
             await db.delete(like_tweet)
             logger.info(f"Like deleted for user {user.id} on tweet {tweet_id}")
 
         await db.commit()
-        return JSONResponse(content={"result": "true"},
-                            status_code=status.HTTP_200_OK)
+        return JSONResponse(content={"result": "true"}, status_code=status.HTTP_200_OK)
 
     except HTTPException as e:
         raise e
@@ -177,17 +166,12 @@ async def put_or_delete_like_on_tweet(
 
 
 async def write_new_tweet(
-        db: AsyncSession,
-        api_key: str,
-        tweet_data: str,
-        tweet_media_ids: List[int] = []
+    db: AsyncSession, api_key: str, tweet_data: str, tweet_media_ids: List[int] = []
 ) -> JSONResponse:
     try:
         user = await check_api_key_user(db, api_key)
 
-        tweet = Tweet(user_id=user.id,
-                      content=tweet_data,
-                      attachments=tweet_media_ids)
+        tweet = Tweet(user_id=user.id, content=tweet_data, attachments=tweet_media_ids)
 
         db.add(tweet)
         await db.flush()
@@ -199,8 +183,7 @@ async def write_new_tweet(
         logger.info(f"Created new tweet with id: {tweet_id}")
 
         result = {"result": "true", "tweet_id": tweet_id}
-        return JSONResponse(content=result,
-                            status_code=status.HTTP_201_CREATED)
+        return JSONResponse(content=result, status_code=status.HTTP_201_CREATED)
 
     except HTTPException as e:
         raise e
@@ -217,9 +200,7 @@ async def write_new_tweet(
         )
 
 
-async def download_file(db: AsyncSession,
-                        api_key: str,
-                        filepath: str) -> JSONResponse:
+async def download_file(db: AsyncSession, api_key: str, filepath: str) -> JSONResponse:
     try:
         logger.debug("download_file function was called")
         user = await check_api_key_user(db, api_key)
@@ -255,10 +236,8 @@ async def get_file_path(db: AsyncSession, file_id: int) -> str:
     Возвращает путь к файлу по его ID.
     """
     try:
-        logger.debug(f"get_file_path function was called "
-                     f"with file_id: {file_id}")
-        result = await db.execute(select(Media.path).
-                                  where(Media.id == file_id))
+        logger.debug(f"get_file_path function was called " f"with file_id: {file_id}")
+        result = await db.execute(select(Media.path).where(Media.id == file_id))
         file_path = result.scalar_one_or_none()
 
         if file_path is None:
@@ -293,8 +272,7 @@ async def delete_tweet_by_user(
     try:
         user = await check_api_key_user(db, api_key)
 
-        result = await db.execute(select(Tweet).
-                                  filter_by(id=tweet_id, user_id=user.id))
+        result = await db.execute(select(Tweet).filter_by(id=tweet_id, user_id=user.id))
         tweet = result.scalars().first()
         if not tweet:
             logger.error(
@@ -313,8 +291,7 @@ async def delete_tweet_by_user(
         await db.delete(tweet)
         await db.commit()
 
-        return JSONResponse(content={"result": "true"},
-                            status_code=status.HTTP_200_OK)
+        return JSONResponse(content={"result": "true"}, status_code=status.HTTP_200_OK)
 
     except HTTPException:
         raise
@@ -355,8 +332,7 @@ async def follow_user(
         # Проверяем, не подписан ли уже пользователь
         result = await db.execute(
             select(SubscribedUser).filter_by(
-                follower_user_id=follower_user.id,
-                subscribed_user_id=subscribed_user.id
+                follower_user_id=follower_user.id, subscribed_user_id=subscribed_user.id
             )
         )
         existing_subscription = result.scalars().first()
@@ -372,8 +348,7 @@ async def follow_user(
 
         # Создаем новую подписку
         new_subscription = SubscribedUser(
-            follower_user_id=follower_user.id,
-            subscribed_user_id=subscribed_user.id
+            follower_user_id=follower_user.id, subscribed_user_id=subscribed_user.id
         )
         db.add(new_subscription)
         await db.commit()
@@ -421,8 +396,7 @@ async def delete_following(
             )
 
         # Получаем пользователя, от которого отписываются, по его ID
-        result = await db.execute(select(User).
-                                  filter_by(id=user_id_to_unfollow))
+        result = await db.execute(select(User).filter_by(id=user_id_to_unfollow))
         subscribed_user = result.scalars().first()
         if not subscribed_user:
             logger.error(f"Пользователь с id {user_id_to_unfollow} не найден")
@@ -438,8 +412,7 @@ async def delete_following(
         # Пытаемся найти подписку между этими пользователями
         result = await db.execute(
             select(SubscribedUser).filter_by(
-                follower_user_id=follower_user.id,
-                subscribed_user_id=subscribed_user.id
+                follower_user_id=follower_user.id, subscribed_user_id=subscribed_user.id
             )
         )
         existing_subscription = result.scalars().first()
@@ -461,8 +434,7 @@ async def delete_following(
             f"отписался от пользователя {subscribed_user.id}"
         )
 
-        return JSONResponse(content={"result": "true"},
-                            status_code=status.HTTP_200_OK)
+        return JSONResponse(content={"result": "true"}, status_code=status.HTTP_200_OK)
 
     except HTTPException:
         raise
@@ -493,8 +465,7 @@ async def get_info_user(
                 detail={
                     "result": "false",
                     "error_type": "ValueError",
-                    "error_message": "Invalid input, "
-                                     "missing api-key and user_id",
+                    "error_message": "Invalid input, " "missing api-key and user_id",
                 },
             )
         # Получаем пользователя по его ID или api-key
@@ -506,8 +477,7 @@ async def get_info_user(
         user = result.scalars().first()
         if not user:
             logger.error(
-                f"Пользователь с id {user_id} и "
-                f"api-key {api_key} не найден"
+                f"Пользователь с id {user_id} и " f"api-key {api_key} не найден"
             )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

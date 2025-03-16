@@ -4,7 +4,6 @@ from main.models import User, Tweet, SubscribedUser, LikeTweet
 from .factories import UserFactory
 
 
-
 @pytest.mark.asyncio
 async def test__get_user_info(async_client, db_session):
     # Создаём пользователя
@@ -25,18 +24,20 @@ async def test__get_user_info(async_client, db_session):
         factory_user = await UserFactory.create(db_session)
         list_ids.append(factory_user.id)
 
-
-
     # Создадим подписки нашего пользователя на часть других пользователей
     for subscribe_id in list_ids[:3]:
-        subscribe = SubscribedUser(follower_user_id=user.id, subscribed_user_id=subscribe_id)
+        subscribe = SubscribedUser(
+            follower_user_id=user.id, subscribed_user_id=subscribe_id
+        )
         db_session.add(subscribe)
         await db_session.flush()
         await db_session.refresh(subscribe)
 
     # Создадим подписки части других пользователей на нашего пользователя user
     for follower_id in list_ids[3:]:
-        subscribe = SubscribedUser(follower_user_id=follower_id, subscribed_user_id=user.id)
+        subscribe = SubscribedUser(
+            follower_user_id=follower_id, subscribed_user_id=user.id
+        )
         db_session.add(subscribe)
         await db_session.flush()
         await db_session.refresh(subscribe)
@@ -65,8 +66,7 @@ async def test__get_user_info(async_client, db_session):
 
     # Делаем запрос на эндпоинт и сверяем полученную информацию
     response = await async_client.get(
-        "/api/users/me",
-        headers={"api-key": user.api_key}
+        "/api/users/me", headers={"api-key": user.api_key}
     )
     assert response.status_code == 200
     user_info_data = response.json()

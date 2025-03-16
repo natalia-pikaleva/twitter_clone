@@ -25,7 +25,9 @@ async def test_delete_tweet(async_client, db_session):
     await db_session.refresh(tweet_user)
 
     # Проверяем, что твит создан
-    tweet = (await db_session.execute(select(Tweet).where(Tweet.id == tweet_user.id))).scalar()
+    tweet = (
+        await db_session.execute(select(Tweet).where(Tweet.id == tweet_user.id))
+    ).scalar()
     assert tweet is not None
 
     # Удаляем созданный твит
@@ -40,7 +42,9 @@ async def test_delete_tweet(async_client, db_session):
     assert tweet_data["result"] == "true"
 
     # Проверяем, что твит удален
-    tweet = (await db_session.execute(select(Tweet).where(Tweet.id == tweet_user.id))).scalar()
+    tweet = (
+        await db_session.execute(select(Tweet).where(Tweet.id == tweet_user.id))
+    ).scalar()
     assert tweet is None
 
 
@@ -65,8 +69,7 @@ async def test_delete_tweet_invalid_api_key(async_client, db_session):
     await db_session.refresh(tweet_user)
 
     response = await async_client.delete(
-        f"/api/tweets/{tweet_user.id}",
-        headers={"api-key": "invalid_api_key"}
+        f"/api/tweets/{tweet_user.id}", headers={"api-key": "invalid_api_key"}
     )
 
     assert response.status_code == 404
@@ -74,6 +77,7 @@ async def test_delete_tweet_invalid_api_key(async_client, db_session):
 
     assert data["result"] == "false"
     assert data["error_type"] == "ValueError"
+
 
 @pytest.mark.asyncio
 async def test_delete_tweet_other_user(async_client, db_session):
@@ -98,7 +102,6 @@ async def test_delete_tweet_other_user(async_client, db_session):
     await db_session.refresh(first_user)
     await db_session.refresh(second_user)
 
-
     # Создаем твит у второго пользователя
     tweet = Tweet(user_id=second_user.id, content=f"test_text_user", attachments=[])
     db_session.add(tweet)
@@ -107,8 +110,7 @@ async def test_delete_tweet_other_user(async_client, db_session):
 
     # Пробуем удалить твит, используя api-key первого пользователя
     response = await async_client.delete(
-        f"/api/tweets/{tweet.id}",
-        headers={"api-key": first_user.api_key}
+        f"/api/tweets/{tweet.id}", headers={"api-key": first_user.api_key}
     )
 
     assert response.status_code == 404
