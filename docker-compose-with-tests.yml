@@ -35,14 +35,43 @@ services:
     networks:
       - my_network
 
-  migrate:
+  postgres-test:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: test_db
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - my_network
+
+  migrate-test:
     build: .
     command: alembic upgrade head
     depends_on:
-      postgres:
+      postgres-test:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/twitter_db
+      DATABASE_URL: postgresql://postgres:postgres@postgres-test:5432/test_db
+    networks:
+      - my_network
+
+  tests:
+    build:
+      context: .
+      dockerfile: test.Dockerfile
+    command: pytest
+    depends_on:
+      migrate-test:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres-test:5432/test_db
     networks:
       - my_network
 
