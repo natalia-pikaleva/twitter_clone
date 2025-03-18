@@ -1,12 +1,15 @@
+aiofiles==24.1.0
 alembic==1.15.1
 asyncpg==0.30.0
 fastapi==0.115.11
 pydantic==2.10.6
 SQLAlchemy==2.0.38
 httpx==0.28.1
+psycopg2-binary==2.9.7
 pytest==8.3.5
 pytest-asyncio==0.25.3
 pytest-factoryboy==2.7.0
+python-multipart==0.0.20
 factory_boy==3.3.3
 uvicorn==0.34.0
 Werkzeug==3.1.3
