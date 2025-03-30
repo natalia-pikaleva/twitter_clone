@@ -22,6 +22,7 @@ from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
     StreamingResponse,
+    FileResponse
 )
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -49,15 +50,32 @@ STATIC_FOLDER = "static"
 
 root_dir = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER_ABSOLUTE = os.path.join(root_dir, UPLOAD_FOLDER)
-TEMPLATES_FOLDER_ABSOLUTE = os.path.join(root_dir, "templates")
-STATIC_FOLDER_ABSOLUTE = os.path.join(root_dir, STATIC_FOLDER)
+# TEMPLATES_FOLDER_ABSOLUTE = os.path.join(root_dir, "templates")
+TEMPLATES_FOLDER_ABSOLUTE = "/app/templates"
+# STATIC_FOLDER_ABSOLUTE = os.path.join(root_dir, STATIC_FOLDER)
+STATIC_FOLDER_ABSOLUTE = "/app/static"
 
 app = FastAPI()
 
-# Настройка статических файлов
-app.mount(
-    "/static", StaticFiles(directory=STATIC_FOLDER_ABSOLUTE, html=True), name="static"
-)
+app.mount("/static", StaticFiles(directory=STATIC_FOLDER_ABSOLUTE), name="static")
+
+@app.middleware("http")
+async def static_file_middleware(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/js/"):
+        new_path = path.replace("/js/", "/static/js/", 1)
+        try:
+            return FileResponse(os.path.join(STATIC_FOLDER_ABSOLUTE, "js", new_path.split("/static/js/", 1)[1]))
+        except FileNotFoundError:
+            return await call_next(request)  # Если файл не найден, передаем дальше
+    elif path.startswith("/css/"):
+        new_path = path.replace("/css/", "/static/css/", 1)
+        try:
+            return FileResponse(os.path.join(STATIC_FOLDER_ABSOLUTE, "css", new_path.split("/static/css/", 1)[1]))
+        except FileNotFoundError:
+            return await call_next(request)  # Если файл не найден, передаем дальше
+    response = await call_next(request)
+    return response
 
 
 # Модели запросов
@@ -83,6 +101,7 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
 @app.get("/", response_class=HTMLResponse)
 async def read_root() -> str:
     try:
+        logger.debug("read_root function was called!")
         template_path = os.path.join(TEMPLATES_FOLDER_ABSOLUTE, "index.html")
         async with aio_open(template_path, "r") as f:
             content = await f.read()
@@ -212,6 +231,7 @@ async def get_media_endpoint(
     id: int, db: AsyncSession = Depends(get_db)
 ) -> JSONResponse:  # noqa: B008
     try:
+        logger.debug("get_media_endpoint function was called!")
         id = int(id)  # Преобразуем id в целое число
     except ValueError:
         raise HTTPException(
