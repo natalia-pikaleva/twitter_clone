@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+from pathlib import Path
 from typing import List
 
 from aiofiles import open as aio_open
@@ -125,6 +126,9 @@ async def create_tweet(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
+    """
+    Create tweet
+    """
     logger.debug("create_tweet function was called!")
 
     logger.info(
@@ -143,6 +147,9 @@ async def upload_media(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
+    """
+    Upload media
+    """
     logger.debug("upload_media function was called!")
 
     if not file:
@@ -183,6 +190,9 @@ async def upload_media(
 
 
 async def get_media(id: int, db: AsyncSession = Depends(get_db)) -> StreamingResponse:
+    """
+    Get media
+    """
     logger.debug(f"get_media function was called with id: {id}")
     media_path = await get_file_path(db, id)
     logger.debug(f"Media path retrieved: {media_path}")
@@ -230,6 +240,9 @@ async def get_media(id: int, db: AsyncSession = Depends(get_db)) -> StreamingRes
 async def get_media_endpoint(
     id: int, db: AsyncSession = Depends(get_db)
 ) -> JSONResponse:  # noqa: B008
+    """
+    Get media file
+    """
     try:
         logger.debug("get_media_endpoint function was called!")
         id = int(id)  # Преобразуем id в целое число
@@ -252,6 +265,9 @@ async def delete_tweet(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
+    """
+    Delete tweet
+    """
     return await delete_tweet_by_user(db, api_key, id)
 
 
@@ -260,6 +276,9 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
+    """
+    Get info about current user
+    """
     logger.debug("get_current_user function was called!")
     return await get_info_user(db, api_key=api_key)
 
@@ -269,6 +288,9 @@ async def get_user_tweets(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
+    """
+    Get tweets
+    """
     logger.debug("get_user_tweets function was called!")
 
     return await get_tweets_by_user_api_key(db, api_key)
@@ -280,6 +302,9 @@ async def put_and_delete_like(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
+    """
+    Create and delete like on tweet
+    """
     return await put_or_delete_like_on_tweet(db, api_key, id)
 
 
@@ -289,6 +314,9 @@ async def post_follow_user(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
+    """
+    Follow current user
+    """
     return await follow_user(db, api_key, id)
 
 
@@ -298,6 +326,9 @@ async def unfollow_user(
     db: AsyncSession = Depends(get_db),  # noqa: B008
     api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
+    """
+    Unfollow current user
+    """
     return await delete_following(db, api_key, id)
 
 
@@ -306,11 +337,17 @@ async def unfollow_user(
 async def get_user_profile(
     id: int, db: AsyncSession = Depends(get_db)
 ) -> JSONResponse:  # noqa: B008
+    """
+    Get user profile
+    """
     return await get_info_user(db, user_id=id)
 
 
 @app.on_event("startup")
 async def startup_event():
+    """
+    Start BD
+    """
     try:
         logger.debug("Start sratup_event function")
         await start_bd(UPLOAD_FOLDER_ABSOLUTE)
