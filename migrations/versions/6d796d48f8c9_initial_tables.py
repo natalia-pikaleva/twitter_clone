@@ -32,7 +32,7 @@ def upgrade() -> None:
         "users",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("login", sa.String(length=50), nullable=False),
-        sa.Column("api_key", sa.String(length=50), nullable=False),
+        sa.Column("api_key", sa.String(length=255), nullable=False),
         sa.Column("name", sa.String(length=50), nullable=False),
         sa.Column("surname", sa.String(length=50), nullable=False),
         sa.PrimaryKeyConstraint("id"),

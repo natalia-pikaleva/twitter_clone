@@ -23,20 +23,11 @@ logger.addHandler(console_handler)
 
 async def check_api_key_user(db: AsyncSession, api_key: str) -> User:
     """Проверка существования пользователя с указанным api-key"""
-    result = await db.execute(select(User).filter_by(api_key=api_key))
-    user = result.scalars().first()
-
-    if not user:
-        logger.error(f"User with api-key {api_key} not found")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "result": "false",
-                "error_type": "ValueError",
-                "error_message": "User with provided api_key not found",
-            },
-        )
-    return user
+    users = await db.execute(select(User))
+    for user in users.scalars():
+        if user.verify_api_key(api_key):
+            return user
+    raise HTTPException(status_code=404, detail="Invalid API key")
 
 
 async def get_tweets_by_user_api_key(db: AsyncSession, api_key: str) -> JSONResponse:
@@ -111,7 +102,7 @@ async def get_tweets_by_user_api_key(db: AsyncSession, api_key: str) -> JSONResp
 
 
 async def put_or_delete_like_on_tweet(
-    db: AsyncSession, api_key: str, tweet_id: int
+        db: AsyncSession, api_key: str, tweet_id: int
 ) -> JSONResponse:
     """Пользователь с данным api-key ставит лайк на твит с tweet_id"""
     try:
@@ -166,7 +157,7 @@ async def put_or_delete_like_on_tweet(
 
 
 async def write_new_tweet(
-    db: AsyncSession, api_key: str, tweet_data: str, tweet_media_ids: List[int] = []
+        db: AsyncSession, api_key: str, tweet_data: str, tweet_media_ids: List[int] = []
 ) -> JSONResponse:
     try:
         user = await check_api_key_user(db, api_key)
@@ -267,7 +258,7 @@ async def get_file_path(db: AsyncSession, file_id: int) -> str:
 
 
 async def delete_tweet_by_user(
-    db: AsyncSession, api_key: str, tweet_id: int
+        db: AsyncSession, api_key: str, tweet_id: int
 ) -> JSONResponse:
     try:
         user = await check_api_key_user(db, api_key)
@@ -284,7 +275,7 @@ async def delete_tweet_by_user(
                     "result": "false",
                     "error_type": "ValueError",
                     "error_message": "Tweet not found or "
-                    "does not belong to the user",
+                                     "does not belong to the user",
                 },
             )
 
@@ -309,7 +300,7 @@ async def delete_tweet_by_user(
 
 
 async def follow_user(
-    db: AsyncSession, api_key: str, user_id_to_follow: int
+        db: AsyncSession, api_key: str, user_id_to_follow: int
 ) -> JSONResponse:
     try:
         # Получаем пользователя, который подписывается, по его API-ключу
@@ -378,14 +369,14 @@ async def follow_user(
 
 
 async def delete_following(
-    db: AsyncSession, api_key: str, user_id_to_unfollow: int
+        db: AsyncSession, api_key: str, user_id_to_unfollow: int
 ) -> JSONResponse:
     try:
         # Получаем пользователя, который отписывается, по его API-ключу
         follower_user = await check_api_key_user(db, api_key)
 
         if not follower_user:
-            logger.error(f"Пользователь с api-key {api_key} не найден")
+            logger.error(f"Пользователь с api-key не найден")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
@@ -452,9 +443,10 @@ async def delete_following(
 
 
 async def get_info_user(
-    db: AsyncSession, user_id: int = 0, api_key: str = ""
+        db: AsyncSession, user_id: int = 0, api_key: str = ""
 ) -> JSONResponse:
     try:
+
         if user_id == 0 and api_key == "":
             logger.error(
                 "Некорректные данные для поиска пользователя, "
@@ -471,13 +463,13 @@ async def get_info_user(
         # Получаем пользователя по его ID или api-key
         if user_id != 0:
             result = await db.execute(select(User).filter_by(id=user_id))
+            user = result.scalars().first()
         else:
-            result = await db.execute(select(User).filter_by(api_key=api_key))
+            user = await check_api_key_user(db, api_key)
 
-        user = result.scalars().first()
         if not user:
             logger.error(
-                f"Пользователь с id {user_id} и " f"api-key {api_key} не найден"
+                f"Пользователь с id {user_id} и " f"api-key не найден"
             )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -512,7 +504,7 @@ async def get_info_user(
 
         logger.info(
             f"Информация о пользователе с id {user_id} и "
-            f"api-key {api_key} успешно получена"
+            f"api-key успешно получена"
         )
 
         return JSONResponse(
