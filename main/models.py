@@ -1,6 +1,7 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
+import bcrypt
 
 Base = declarative_base()
 
@@ -34,11 +35,36 @@ class SubscribedUser(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer(), primary_key=True, autoincrement=True)
-    login = Column(String(50), nullable=False)
-    api_key = Column(String(50), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    login = Column(String(50), nullable=False, unique=True)  # Изменено
+    _api_key_hash = Column("api_key", String(255), index=True)
     name = Column(String(50), nullable=False)
     surname = Column(String(50), nullable=False)
+
+    @property
+    def api_key(self):
+        raise AttributeError("Доступ к API-ключу запрещен")
+
+    def set_api_key(self, raw_key: str):
+        self._api_key_hash = bcrypt.hashpw(
+            raw_key.encode(),
+            bcrypt.gensalt()
+        ).decode()
+
+    def verify_api_key(self, raw_key: str) -> bool:
+        if not hasattr(self, '_api_key_hash') or not self._api_key_hash:
+            return False
+        try:
+            return bcrypt.checkpw(
+                raw_key.encode(),
+                self._api_key_hash.encode()
+            )
+        except (ValueError, AttributeError):
+            return False
+
+    __table_args__ = (
+        UniqueConstraint("api_key", name="unique_api_key"),
+    )
 
     tweet = relationship(
         "Tweet", back_populates="user", cascade="all, delete-orphan", lazy="selectin"
@@ -61,8 +87,6 @@ class User(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-
-    __table_args__ = (UniqueConstraint("api_key", name="unique_api_key"),)
 
 
 class Tweet(Base):

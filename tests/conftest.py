@@ -1,3 +1,5 @@
+from os import getenv
+from dotenv import load_dotenv
 import pytest
 import pytest_asyncio
 import asyncio
@@ -14,9 +16,20 @@ import sys
 sys.path.insert(0, ".")
 
 # Конфигурация тестовой БД
-TEST_SQLALCHEMY_DATABASE_URI = (
-    "postgresql+asyncpg://postgres:postgres@postgres-test:5432/test_db"
+load_dotenv()
+
+DB_USER = getenv(
+    "DB_USER",
 )
+
+DB_PASSWORD = getenv(
+    "DB_PASSWORD",
+)
+
+TEST_SQLALCHEMY_DATABASE_URI = (
+    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@postgres:5432/test_db"
+)
+
 test_engine = create_async_engine(TEST_SQLALCHEMY_DATABASE_URI)
 TestAsyncSessionLocal = sessionmaker(
     test_engine, expire_on_commit=False, class_=AsyncSession
@@ -54,7 +67,7 @@ async def async_client(db_session):
     app.dependency_overrides[get_db] = lambda: db_session
 
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
+            transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client
 

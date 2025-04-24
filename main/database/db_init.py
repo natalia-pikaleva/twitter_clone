@@ -3,6 +3,8 @@ import csv
 import json
 import logging
 import os
+from os import getenv
+from dotenv import load_dotenv
 from typing import AsyncGenerator, List
 
 import asyncpg
@@ -14,8 +16,18 @@ from sqlalchemy.orm import sessionmaker
 
 from main.models import Base, LikeTweet, Media, SubscribedUser, Tweet, User
 
+load_dotenv()
+
+DB_USER = getenv(
+    "DB_USER",
+)
+
+DB_PASSWORD = getenv(
+    "DB_PASSWORD",
+)
+
 SQLALCHEMY_DATABASE_URI = (
-    "postgresql+asyncpg://postgres:postgres@postgres:5432/twitter_db"
+    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@postgres:5432/twitter_db"
 )
 
 # engine = create_async_engine(SQLALCHEMY_DATABASE_URI, echo=True)
@@ -58,10 +70,10 @@ async def insert_users(session: AsyncSession) -> None:
             for row in reader:
                 user = User(
                     login=row["login"],
-                    api_key=row["api_key"],
                     name=row["name"],
                     surname=row["surname"],
                 )
+                user.set_api_key(row["api_key"])
                 users_to_insert.append(user)
             session.add_all(users_to_insert)
             await session.commit()
@@ -118,7 +130,7 @@ async def load_tweets_data(file_path: str) -> dict:
 
 
 async def insert_media(
-    session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str, attachments_list: List[str]
+        session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str, attachments_list: List[str]
 ) -> List[int]:
     """Вставка медиа в базу данных"""
     media_ids = []
@@ -134,7 +146,7 @@ async def insert_media(
 
 
 async def insert_tweets(
-    session: AsyncSession, data: dict, UPLOAD_FOLDER_ABSOLUTE: str
+        session: AsyncSession, data: dict, UPLOAD_FOLDER_ABSOLUTE: str
 ) -> None:
     """Вставка твитов в базу данных"""
     tweets_to_insert = []
@@ -195,7 +207,7 @@ async def insert_likes(session: AsyncSession, data: dict) -> None:
 
 
 async def insert_tweets_and_likes(
-    session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str
+        session: AsyncSession, UPLOAD_FOLDER_ABSOLUTE: str
 ) -> None:
     """Заполнение таблиц твитов и лайков"""
     logger.info("Start func insert_tweets_and_likes")
@@ -277,7 +289,7 @@ async def start_bd(UPLOAD_FOLDER_ABSOLUTE) -> None:
     """
     try:
         SQLALCHEMY_DATABASE_URI = (
-            "postgresql+asyncpg://postgres:postgres@postgres:5432/twitter_db"
+            f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@postgres:5432/twitter_db"
         )
         db_name = "twitter_db"
 

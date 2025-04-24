@@ -60,6 +60,12 @@ app = FastAPI()
 
 app.mount("/static", StaticFiles(directory=STATIC_FOLDER_ABSOLUTE), name="static")
 
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico")
+
+
 @app.middleware("http")
 async def static_file_middleware(request: Request, call_next):
     path = request.url.path
@@ -75,6 +81,7 @@ async def static_file_middleware(request: Request, call_next):
             return FileResponse(os.path.join(STATIC_FOLDER_ABSOLUTE, "css", new_path.split("/static/css/", 1)[1]))
         except FileNotFoundError:
             return await call_next(request)  # Если файл не найден, передаем дальше
+
     response = await call_next(request)
     return response
 
@@ -121,10 +128,10 @@ async def read_root() -> str:
 
 @app.post("/api/tweets")
 async def create_tweet(
-    tweet_data: TweetCreate,
-    request: Request,
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-    api_key: str = Header(..., alias="api-key"),
+        tweet_data: TweetCreate,
+        request: Request,
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+        api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     """
     Create tweet
@@ -143,9 +150,9 @@ async def create_tweet(
 
 @app.post("/api/medias")
 async def upload_media(
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-    api_key: str = Header(..., alias="api-key"),
+        file: UploadFile = File(...),
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+        api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     """
     Upload media
@@ -238,7 +245,7 @@ async def get_media(id: int, db: AsyncSession = Depends(get_db)) -> StreamingRes
 
 @app.get("/{id}")
 async def get_media_endpoint(
-    id: int, db: AsyncSession = Depends(get_db)
+        id: int, db: AsyncSession = Depends(get_db)
 ) -> JSONResponse:  # noqa: B008
     """
     Get media file
@@ -261,9 +268,9 @@ async def get_media_endpoint(
 
 @app.delete("/api/tweets/{id}")
 async def delete_tweet(
-    id: int,
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-    api_key: str = Header(..., alias="api-key"),
+        id: int,
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+        api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     """
     Delete tweet
@@ -273,8 +280,8 @@ async def delete_tweet(
 
 @app.get("/api/users/me")
 async def get_current_user(
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-    api_key: str = Header(..., alias="api-key"),
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+        api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     """
     Get info about current user
@@ -285,8 +292,8 @@ async def get_current_user(
 
 @app.get("/api/tweets")
 async def get_user_tweets(
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-    api_key: str = Header(..., alias="api-key"),
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+        api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     """
     Get tweets
@@ -298,9 +305,9 @@ async def get_user_tweets(
 
 @app.post("/api/tweets/{id}/likes")
 async def put_and_delete_like(
-    id: int,
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-    api_key: str = Header(..., alias="api-key"),
+        id: int,
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+        api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     """
     Create and delete like on tweet
@@ -310,9 +317,9 @@ async def put_and_delete_like(
 
 @app.post("/api/users/{id}/follow")
 async def post_follow_user(
-    id: int,
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-    api_key: str = Header(..., alias="api-key"),
+        id: int,
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+        api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     """
     Follow current user
@@ -322,9 +329,9 @@ async def post_follow_user(
 
 @app.delete("/api/users/{id}/follow")
 async def unfollow_user(
-    id: int,
-    db: AsyncSession = Depends(get_db),  # noqa: B008
-    api_key: str = Header(..., alias="api-key"),
+        id: int,
+        db: AsyncSession = Depends(get_db),  # noqa: B008
+        api_key: str = Header(..., alias="api-key"),
 ) -> JSONResponse:
     """
     Unfollow current user
@@ -335,7 +342,7 @@ async def unfollow_user(
 @app.get("/api/users/{id}")
 @app.get("/profile/{id}")
 async def get_user_profile(
-    id: int, db: AsyncSession = Depends(get_db)
+        id: int, db: AsyncSession = Depends(get_db)
 ) -> JSONResponse:  # noqa: B008
     """
     Get user profile
