@@ -8,13 +8,13 @@ from .factories import UserFactory
 @pytest.mark.asyncio
 async def test_get_tweets(async_client, db_session):
     # Создаем 5 пользователей и сохраняем их id
-    list_ids = []
-    for index in range(5):
-        factory_user = await UserFactory.create(db_session)
-        list_ids.append(factory_user.id)
+    list_users = []
+    for _ in range(5):
+        factory_user = await UserFactory.create(session=db_session)
+        list_users.append((factory_user.id, factory_user._raw_api_key))
 
     # Создадим у каждого пользователя случайное количество твитов
-    for user_id in list_ids:
+    for user_id, _ in list_users:
         count_tweets = random.randint(
             1, 5
         )  # Убедитесь, что хотя бы один твит создается
@@ -27,11 +27,13 @@ async def test_get_tweets(async_client, db_session):
             await db_session.refresh(tweet)
 
     # Создадим подписки между пользователями
-    for i in range(len(list_ids)):
-        for j in range(i + 1, len(list_ids)):
+    for i in range(len(list_users)):
+        for j in range(i + 1, len(list_users)):
             if random.random() < 0.5:  # Подписываемся с вероятностью 50%
+                follower_user_id, _ = list_users[i]
+                subscribed_user_id, _ = list_users[j]
                 subscription = SubscribedUser(
-                    follower_user_id=list_ids[i], subscribed_user_id=list_ids[j]
+                    follower_user_id=follower_user_id, subscribed_user_id=subscribed_user_id
                 )
                 db_session.add(subscription)
                 await db_session.flush()
@@ -41,18 +43,18 @@ async def test_get_tweets(async_client, db_session):
     tweets = (await db_session.execute(select(Tweet))).scalars().all()
     for tweet in tweets:
         if random.random() < 0.5:  # Лайкаем с вероятностью 50%
-            like = LikeTweet(user_id=random.choice(list_ids), tweet_id=tweet.id)
+            random_user = random.choice(list_users)  # Выбираем случайный кортеж (id, api_key)
+            user_id, api_key = random_user
+            like = LikeTweet(user_id=user_id, tweet_id=tweet.id)
             db_session.add(like)
             await db_session.flush()
             await db_session.refresh(like)
 
     # Проверяем эндпоинт для каждого пользователя
-    for user_id in list_ids:
-        user = (
-            await db_session.execute(select(User).where(User.id == user_id))
-        ).scalar()
+    for user_id, api_key_user in list_users:
+
         response = await async_client.get(
-            "/api/tweets", headers={"api-key": user.api_key}
+            "/api/tweets", headers={"api-key":api_key_user}
         )
         assert response.status_code == 200
 

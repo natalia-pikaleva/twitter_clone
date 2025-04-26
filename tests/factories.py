@@ -1,6 +1,6 @@
 import factory
 from factory.alchemy import SQLAlchemyModelFactory
-from factory import Faker, SubFactory
+from factory import Faker, SubFactory, post_generation
 from sqlalchemy.ext.asyncio import AsyncSession
 import random
 import secrets
@@ -34,11 +34,15 @@ class UserFactory(AsyncSQLAlchemyModelFactory):
     name = Faker("first_name")
     surname = Faker("last_name")
     login = Faker("text", max_nb_chars=10)
-    api_key = factory.LazyFunction(
-        lambda: "".join(
+
+    @post_generation
+    def api_key(self, create, extracted, **kwargs):
+        raw_key = extracted or "".join(
             secrets.choice(string.ascii_letters + string.digits) for _ in range(10)
         )
-    )
+        self.set_api_key(raw_key)
+        self._raw_api_key = raw_key
+
 
 
 class TweetFactory(AsyncSQLAlchemyModelFactory):

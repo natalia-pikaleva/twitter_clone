@@ -1,25 +1,15 @@
 from sqlalchemy import select
-from main.app import get_media
 import pytest
-from main.models import User, Tweet, Media
+from main.models import Media
 import os
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from .factories import UserFactory
 
 
 @pytest.mark.asyncio
 async def test_get_media_success(async_client, test_file, db_session):
     # Создаём пользователя
-    user = User(
-        login="test_login",
-        api_key="123",
-        name="test_name",
-        surname="test_surname",
-    )
-
-    db_session.add(user)
-    await db_session.flush()
-    await db_session.refresh(user)
+    user = await UserFactory.create(session=db_session)
 
     # Получаем абсолютный путь к директории приложения
     app_dir = Path(__file__).parent.parent
@@ -50,7 +40,7 @@ async def test_get_media_success(async_client, test_file, db_session):
     # Отправляем запрос к эндпоинту
     response = await async_client.get(
         "/api/medias/1",
-        headers={"api-key": user.api_key},
+        headers={"api-key": user._raw_api_key},
     )
 
     # Проверяем ответ
