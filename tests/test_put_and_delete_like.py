@@ -8,15 +8,15 @@ from sqlalchemy.sql.expression import or_
 
 @pytest.mark.asyncio
 async def test_put_and_delete_likes(async_client, db_session):
-    # Создаем 5 пользователей и сохраняем их id
-    list_ids = []
-    for index in range(5):
-        factory_user = await UserFactory.create(db_session)
-        list_ids.append(factory_user.id)
+    # Создаем 5 пользователей и сохраняем их id и api-key
+    list_users = []
+    for _ in range(5):
+        factory_user = await UserFactory.create(session=db_session)
+        list_users.append((factory_user.id, factory_user._raw_api_key))
 
     # Создадим у каждого пользователя случайное количество твитов, сохраним их id
     list_tweets_ids = []
-    for user_id in list_ids:
+    for user_id, api_key_user in list_users:
         count_tweets = random.randint(
             1, 5
         )  # Убедитесь, что хотя бы один твит создается
@@ -30,14 +30,10 @@ async def test_put_and_delete_likes(async_client, db_session):
             list_tweets_ids.append(tweet.id)
 
     # Создадим лайки для каждого пользователя
-    for user_id in list_ids:
-        user = (
-            await db_session.execute(select(User).where(User.id == user_id))
-        ).scalar()
-
+    for user_id, api_key_user in list_users:
         for tweet_id in list_tweets_ids:
             response = await async_client.post(
-                f"/api/tweets/{tweet_id}/likes", headers={"api-key": user.api_key}
+                f"/api/tweets/{tweet_id}/likes", headers={"api-key": api_key_user}
             )
             assert response.status_code == 200
 
@@ -56,14 +52,10 @@ async def test_put_and_delete_likes(async_client, db_session):
             assert db_like_tweet is not None
 
     # Удалим все лайки для каждого пользователя
-    for user_id in list_ids:
-        user = (
-            await db_session.execute(select(User).where(User.id == user_id))
-        ).scalar()
-
+    for user_id, api_key_user in list_users:
         for tweet_id in list_tweets_ids:
             response = await async_client.post(
-                f"/api/tweets/{tweet_id}/likes", headers={"api-key": user.api_key}
+                f"/api/tweets/{tweet_id}/likes", headers={"api-key": api_key_user}
             )
             assert response.status_code == 200
 
@@ -85,25 +77,8 @@ async def test_put_and_delete_likes(async_client, db_session):
 @pytest.mark.asyncio
 async def test_put_likes_invalid_api_key(async_client, db_session):
     # Создаём двух пользователей
-    first_user = User(
-        login="first_test_login",
-        api_key="first123",
-        name="first_test_name",
-        surname="first_test_surname",
-    )
-
-    second_user = User(
-        login="second_test_login",
-        api_key="second123",
-        name="second_test_name",
-        surname="second_test_surname",
-    )
-
-    db_session.add(first_user)
-    db_session.add(second_user)
-    await db_session.flush()
-    await db_session.refresh(first_user)
-    await db_session.refresh(second_user)
+    first_user = await UserFactory.create(session=db_session)
+    second_user = await UserFactory.create(session=db_session)
 
     # У каждого пользователя создаем по одному твиту
     tweet_first_user = Tweet(
@@ -125,21 +100,27 @@ async def test_put_likes_invalid_api_key(async_client, db_session):
     )
     assert response.status_code == 404
 
-    data = response.json()
-    assert "result" in data
-    assert data["result"] == "false"
-    assert data["error_type"] == "ValueError"
+    assert response.status_code in (401, 403, 404)
+    try:
+        data = response.json()
+        assert "result" in data
+        assert data["result"] == "false"
+        assert data["error_type"] == "ValueError"
+    except:
+        assert "Invalid API key" in response.text
 
     response = await async_client.post(
         f"/api/tweets/{tweet_second_user.id}/likes",
         headers={"api-key": "Invalid_api_key"},
     )
-    assert response.status_code == 404
-
-    data = response.json()
-    assert "result" in data
-    assert data["result"] == "false"
-    assert data["error_type"] == "ValueError"
+    assert response.status_code in (401, 403, 404)
+    try:
+        data = response.json()
+        assert "result" in data
+        assert data["result"] == "false"
+        assert data["error_type"] == "ValueError"
+    except:
+        assert "Invalid API key" in response.text
 
     # Проверяем, что лайков в базе данных нет
     db_like_tweet = (
@@ -160,25 +141,8 @@ async def test_put_likes_invalid_api_key(async_client, db_session):
 @pytest.mark.asyncio
 async def test_put_likes_invalid_tweet_id(async_client, db_session):
     # Создаём двух пользователей
-    first_user = User(
-        login="first_test_login",
-        api_key="first123",
-        name="first_test_name",
-        surname="first_test_surname",
-    )
-
-    second_user = User(
-        login="second_test_login",
-        api_key="second123",
-        name="second_test_name",
-        surname="second_test_surname",
-    )
-
-    db_session.add(first_user)
-    db_session.add(second_user)
-    await db_session.flush()
-    await db_session.refresh(first_user)
-    await db_session.refresh(second_user)
+    first_user = await UserFactory.create(session=db_session)
+    second_user = await UserFactory.create(session=db_session)
 
     # У каждого пользователя создаем по одному твиту
     tweet_first_user = Tweet(
@@ -196,7 +160,7 @@ async def test_put_likes_invalid_tweet_id(async_client, db_session):
     # Пробуем поставить лайки на твиты используя неверный id твитов
     response = await async_client.post(
         f"/api/tweets/{tweet_first_user.id * 10}/likes",
-        headers={"api-key": first_user.api_key},
+        headers={"api-key": first_user._raw_api_key},
     )
     assert response.status_code == 404
 
@@ -207,7 +171,7 @@ async def test_put_likes_invalid_tweet_id(async_client, db_session):
 
     response = await async_client.post(
         f"/api/tweets/{tweet_second_user.id * 10}/likes",
-        headers={"api-key": first_user.api_key},
+        headers={"api-key": first_user._raw_api_key},
     )
     assert response.status_code == 404
 

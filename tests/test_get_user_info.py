@@ -7,21 +7,12 @@ from .factories import UserFactory
 @pytest.mark.asyncio
 async def test__get_user_info(async_client, db_session):
     # Создаём пользователя
-    user = User(
-        login="test_login",
-        api_key="123",
-        name="test_name",
-        surname="test_surname",
-    )
-
-    db_session.add(user)
-    await db_session.flush()
-    await db_session.refresh(user)
+    user = await UserFactory.create(session=db_session)
 
     # Создаем еще несколько пользователей и сохраняем их id
     list_ids = []
     for index in range(6):
-        factory_user = await UserFactory.create(db_session)
+        factory_user = await UserFactory.create(session=db_session)
         list_ids.append(factory_user.id)
 
     # Создадим подписки нашего пользователя на часть других пользователей
@@ -66,7 +57,7 @@ async def test__get_user_info(async_client, db_session):
 
     # Делаем запрос на эндпоинт и сверяем полученную информацию
     response = await async_client.get(
-        "/api/users/me", headers={"api-key": user.api_key}
+        "/api/users/me", headers={"api-key": user._raw_api_key}
     )
     assert response.status_code == 200
     user_info_data = response.json()

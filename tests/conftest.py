@@ -27,7 +27,7 @@ DB_PASSWORD = getenv(
 )
 
 TEST_SQLALCHEMY_DATABASE_URI = (
-    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@postgres:5432/test_db"
+    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@postgres-test:5432/test_db"
 )
 
 test_engine = create_async_engine(TEST_SQLALCHEMY_DATABASE_URI)

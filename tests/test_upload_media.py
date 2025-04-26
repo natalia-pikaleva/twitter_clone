@@ -2,21 +2,13 @@ from sqlalchemy import select
 
 import pytest
 from main.models import User, Media
+from .factories import UserFactory
 
 
 @pytest.mark.asyncio
 async def test_upload_file(async_client, db_session):
     # Создаём пользователя
-    user = User(
-        login="test_login",
-        api_key="123",
-        name="test_name",
-        surname="test_surname",
-    )
-
-    db_session.add(user)
-    await db_session.flush()
-    await db_session.refresh(user)
+    user = await UserFactory.create(session=db_session)
 
     # Создаём тестовый файл
     file_path = "tests/test_image.jpeg"
@@ -26,7 +18,7 @@ async def test_upload_file(async_client, db_session):
         # Отправляем запрос с файлом
         response = await async_client.post(
             "/api/medias",
-            headers={"api-key": user.api_key},
+            headers={"api-key": user._raw_api_key},
             files=files,  # Передаём файл через параметр files
         )
 
@@ -40,19 +32,10 @@ async def test_upload_file(async_client, db_session):
 @pytest.mark.asyncio
 async def test_upload_file_without_file(async_client, db_session):
     # Создаём пользователя
-    user = User(
-        login="test_login",
-        api_key="123",
-        name="test_name",
-        surname="test_surname",
-    )
-
-    db_session.add(user)
-    await db_session.flush()
-    await db_session.refresh(user)
+    user = await UserFactory.create(session=db_session)
 
     # Отправляем запрос без файла
-    response = await async_client.post("/api/medias", headers={"api-key": user.api_key})
+    response = await async_client.post("/api/medias", headers={"api-key": user._raw_api_key})
 
     assert response.status_code == 422
     data = response.json()
@@ -66,16 +49,7 @@ async def test_upload_file_without_file(async_client, db_session):
 @pytest.mark.asyncio
 async def test_upload_file_not_allowed(async_client, db_session):
     # Создаём пользователя
-    user = User(
-        login="test_login",
-        api_key="123",
-        name="test_name",
-        surname="test_surname",
-    )
-
-    db_session.add(user)
-    await db_session.flush()
-    await db_session.refresh(user)
+    user = await UserFactory.create(session=db_session)
 
     # Создаём тестовый файл, который не является картинкой
     file_path = "tests/test_txt_file.txt"
@@ -85,7 +59,7 @@ async def test_upload_file_not_allowed(async_client, db_session):
         # Отправляем запрос с файлом
         response = await async_client.post(
             "/api/medias",
-            headers={"api-key": user.api_key},
+            headers={"api-key": user._raw_api_key},
             files=files,  # Передаём файл через параметр files
         )
 
